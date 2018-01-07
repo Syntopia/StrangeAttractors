@@ -39,7 +39,7 @@ function Aizawa() {
 Aizawa.prototype = Object.assign(Aizawa.prototype, {
     constructor: Aizawa,
 
-    getName() {
+    getName: function() {
         return "Aizawa";
     },
 
@@ -63,7 +63,7 @@ function Rucklidge() {
 Rucklidge.prototype = Object.assign(Rucklidge.prototype, {
     constructor: Rucklidge,
 
-    getName() {
+    getName: function() {
         return "Rucklidge";
     },
 
@@ -92,7 +92,7 @@ function Lorentz() {
 Lorentz.prototype = Object.assign(Lorentz.prototype, {
     constructor: Lorentz,
 
-    getName() {
+    getName: function() {
         return "Lorentz";
     },
 
@@ -119,7 +119,7 @@ function ChenLee() {
 ChenLee.prototype = Object.assign(ChenLee.prototype, {
     constructor: ChenLee,
 
-    getName() {
+    getName: function() {
         return "Chen Lee";
     },
 

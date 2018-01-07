@@ -1,13 +1,11 @@
 <html>
 
 <head>
-	<link href="https://fonts.googleapis.com/css?family=Cardo|Open+Sans:400,400i,600|Material+Icons" rel="stylesheet">
 	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/numeric/1.2.6/numeric.min.js"></script>
 	<style type="text/css">
 		html,
 		body {
 			padding: 0px;
-			font: 750 32px/1.5em Cardo, Georgia, serif;
 			color: white;
 			font-size: 21px;
 			margin: 0px;
@@ -23,9 +21,8 @@
 		}
 
 		a {
-			font-family: Cardo, Georgia, serif;
 			color: #ddf;
-			border-bottom: 3px dotted #ddf;
+			border-bottom: 1.5px dotted #ddf;
 			padding: 0px 1px;
 			cursor: pointer;
 			text-decoration: none;
@@ -193,8 +190,8 @@
 
 <body>
 	<div style="position: fixed; padding: 30px;" id="ui">
-		<h1>Strange Attractors</h1>
-		<p font-size="9px">
+		<img src="logo.png" />
+		<p style="font-size: 9px">
 			3D using
 			<a href="https://threejs.org/">three.js</a>.
 
@@ -261,10 +258,14 @@
 		}
 
 		function updateAttractor() {
-			scene.remove(mesh);
-			mesh.geometry.dispose();
-			var path = new AttractorCurve(10000, attractor);
+			if (mesh !== undefined) {
+				scene.remove(mesh);
+				mesh.geometry.dispose();
+			}
+			var path = new AttractorCurve(125000, attractor);
 			path.init();
+			//var m = new THREE.MeshBasicMaterial();
+			//m.wireframe = true;
 			mesh = new THREE.Mesh(path.getGeometry(), standardMaterial);
 			mesh.receiveShadow = true;
 			mesh.castShadow = true;
@@ -336,7 +337,6 @@
 		}
 
 		ui.insertAdjacentHTML('beforeend', "<div class='dynamicUI'>Attractor: <a class=toggle href='javascript:showFunctionExamples();' >" + attractor.getName() + "</a> </div>");
-		ui.insertAdjacentHTML('beforeend', "<div><a class=toggle href='javascript:updateAttractor();' >Update</a> </div>");
 		
 		if (!Detector.webgl)
 			Detector.addGetWebGLMessage();
@@ -400,6 +400,8 @@
 				roughness: 0.0
 			});
 
+			
+
 			var groundMaterial = new THREE.MeshStandardMaterial({
 				map: null,
 				color: 0xaaaaaa,
@@ -408,12 +410,7 @@
 			});
 
 			// Create attractor mesh
-			var path = new AttractorCurve(10000, attractor);
-			path.init();
-			mesh = new THREE.Mesh(path.getGeometry(), standardMaterial);
-			mesh.receiveShadow = true;
-			mesh.castShadow = true;
-			scene.add(mesh);
+			setAttractor(0);
 
 			// Create a ground plane.
 			var geometry = new THREE.PlaneBufferGeometry(5000, 5000, 2, 2);
@@ -511,7 +508,7 @@
 			controls = new THREE.OrbitControls(camera, renderer.domElement);
 			controls.update();
 			controls.autoRotate = false;
-			controls.enableDamping = false;
+			controls.enableDamping = true;
 
 			window.addEventListener('resize', onWindowResize, false);
 

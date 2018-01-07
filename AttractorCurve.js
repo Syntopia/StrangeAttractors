@@ -32,7 +32,7 @@ function AttractorCurve(count, attractor) {
     this.pos = [];
     this.normals = [];
     this.tangents = [];
-    this.count = count+1;
+    this.count = count;
     this.attractor = attractor;
 }
 
@@ -42,10 +42,13 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
 
     build: function () {
         var start = performance.now();
+
+        this.pos = new Array(this.count);
+        this.tangents = new Array(this.count);
         
         var p = [0, 1, 1];
         var t = 0.01 * 2;
-        var subAdvance = 20;
+        var subAdvance = 2;
 
         // Warmup
         for (var i = 0; i < 1000; i++) {
@@ -59,16 +62,14 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
         // advancing this using the attractor equation. This gives us a new normal point, which is made orthogonal to the tangent.
         // This creates a smooth orthogonal frame (I did try Frenet frames (normals based on acceleration), but that will not work for near-linear stretches)
         for (var i = 0; i < this.count; i++) {
+            var old = [p[0],p[1],p[2]];
+
             // A bit higher resolution by taking smaller steps
             for (var j = 0; j < subAdvance; j++)
                 p = this.attractor.advance(p, t / subAdvance);
 
-            var pb = this.attractor.advance(p, -t);
-            var pa = this.attractor.advance(p, t);
-
             var position = new THREE.Vector3(p[0], p[1], p[2]);
-            var tangent = new THREE.Vector3(pa[0] - pb[0], pa[1] - pb[1], pa[2] - pb[2]);
-
+            var tangent = new THREE.Vector3(p[0] - old[0], p[1] - old[1], p[2] - old[2]);
             tangent = tangent.normalize();
 
             if (i == 0) {
@@ -79,7 +80,7 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
                 this.normals.push(normal);
             } else {
                 // Move previous normal along the path (using the Attractor equations), and orthogonalize it.
-                var normal= [this.pos[i - 1].x + this.normals[i - 1].x, this.pos[i - 1].y + this.normals[i - 1].y,
+                var normal = [this.pos[i - 1].x + this.normals[i - 1].x, this.pos[i - 1].y + this.normals[i - 1].y,
                 this.pos[i - 1].z + this.normals[i - 1].z];
                 normal = this.attractor.advance(normal, t);
                 normal = new THREE.Vector3(normal[0] - p[0], normal[1] - p[1], normal[2] - p[2]);
@@ -87,115 +88,114 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
                 normal = normal.normalize();
                 this.normals.push(normal);
             }
-            this.pos.push(position);
-            this.tangents.push(tangent);
+            this.pos[i] = position;
+            this.tangents[i] = tangent;
         }
 
         this.center();
 
         var end = performance.now();
-        console.log('Building attractor took ' + (end - start) + ' ms.');
+        console.log('Building attractor took ' + (end - start) + ' ms. ' + this.pos.length + " steps.");
     },
 
-    get2DShape: function() {
-        var size = 0.3;
-        var points = [], numPts = 5;
+    get2DShape: function () {
+        var size = 0.1;
+        var points = [], numPts = 2;
         var normals = [];
-        for ( var i = 0; i < numPts * 2+1; i ++ ) {
-                var l = i % 2 == 1 ? 1*size : 1.6*size;
-                var a = i / numPts * Math.PI;
-                points.push( [ Math.cos( a ) * l, Math.sin( a ) * l ] );
-                normals.push( [ Math.cos( a ) * l, Math.sin( a ) * l ] );
-            }
-        
-            return { points: points,
-                     normals: normals };
+        for (var i = 0; i < numPts * 2 + 1; i++) {
+            var l = i % 2 == 1 ? 1 * size : 1.0 * size;
+            var a = i / numPts * Math.PI;
+            points.push([Math.cos(a) * l, Math.sin(a) * l]);
+            normals.push([Math.cos(a) * l, Math.sin(a) * l]);
+        }
+
+        return {
+            points: points,
+            normals: normals
+        };
     },
 
-    
-    getGeometry: function() {
+
+    getGeometry: function () {
         var start = performance.now();
 
-        var geometry = new THREE.BufferGeometry();
-        var positions = [];
-        var normals = [];
-        var colors = [];
-        var indices = [];
         
         var shape = this.get2DShape();
         var shapeCount = shape.points.length;
-        
+
+        var geometry = new THREE.BufferGeometry();
+        var positions = new Array(this.count*(shapeCount-1)*3);
+        var normals = new Array(this.count*(shapeCount-1)*3);
+        var colors = [];
+        var indices = new Array((this.count - 2)*(shapeCount-1));
+
         var frames = this.getFrames();
 
-        function addVertex(p1,p2,p3,n1,n2,n3) {
-            positions.push(p1[0],p1[1],p1[2]);
-            positions.push(p2[0],p2[1],p2[2]);
-            positions.push(p3[0],p3[1],p3[2]);
-            normals.push(n1[0],n1[1],n1[2]);
-            normals.push(n2[0],n2[1],n2[2]);
-            normals.push(n3[0],n3[1],n3[2]);
+        function addVertex(p1, p2, p3, n1, n2, n3) {
+            positions.push(p1[0], p1[1], p1[2]);
+            positions.push(p2[0], p2[1], p2[2]);
+            positions.push(p3[0], p3[1], p3[2]);
+            normals.push(n1[0], n1[1], n1[2]);
+            normals.push(n2[0], n2[1], n2[2]);
+            normals.push(n3[0], n3[1], n3[2]);
         };
 
-        function inFrame(coord, normal, binormal, pos) {
-            if ( pos !== undefined ) {
-                var t = pos.clone().addScaledVector(normal, coord[0]).addScaledVector(binormal, coord[1]);
-                return [t.x,t.y,t.z];
-            } else {
-                var t = (new THREE.Vector3()).addScaledVector(normal, coord[0]).addScaledVector(binormal, coord[1]);
-                return [t.x,t.y,t.z];
-            }
+        var p = 0;
+        var n = 0;
+        function inFrame(coord, ncoord, normal, binormal, pos) {
+            // pos.clone().addScaledVector(normal, coord[0]).addScaledVector(binormal, coord[1]);
+            positions[p++] = pos.x + coord[0] * normal.x + coord[1] * binormal.x;
+            positions[p++] = pos.y + coord[0] * normal.y + coord[1] * binormal.y;
+            positions[p++] = pos.z + coord[0] * normal.z + coord[1] * binormal.z;
+            // (new THREE.Vector3()).addScaledVector(normal, coord[0]).addScaledVector(binormal, coord[1]);
+            normals[n++] = ncoord[0] * normal.x + ncoord[1] * binormal.x;
+            normals[n++] = ncoord[0] * normal.y + ncoord[1] * binormal.y;
+            normals[n++] = ncoord[0] * normal.z + ncoord[1] * binormal.z;
         };
-    
-        var tris = 0;
+
         for (var i = 0; i < this.count; i++) {
-            
-            for (var j = 0; j<shapeCount-1; j++) {
+            for (var j = 0; j < shapeCount - 1; j++) {
                 // Create a quad (two triangles) along extrusion path
                 var s1 = shape.points[j];
-                var s2 = shape.points[j+1];
                 var sn1 = shape.normals[j];
-                var sn2 = shape.normals[j+1];
-               
-                var p1 = inFrame(s1, frames.normals[i], frames.binormals[i], this.pos[i]);
-             //   var p1next = inFrame(s1, frames.normals[i+1], frames.binormals[i+1], this.pos[i+1]);
-             //   var p2 = inFrame(s2, frames.normals[i], frames.binormals[i], this.pos[i]);
-             //   var p2next = inFrame(s2, frames.normals[i+1], frames.binormals[i+1], this.pos[i+1]);
-                var n1 = inFrame(sn1, frames.normals[i], frames.binormals[i]);
-            //    var n1next = inFrame(sn1, frames.normals[i+1], frames.binormals[i+1]);
-             //   var n2 = inFrame(sn2, frames.normals[i], frames.binormals[i]);
-             //   var n2next = inFrame(sn2, frames.normals[i+1], frames.binormals[i+1]);
-               positions.push(p1[0],p1[1],p1[2]);
-                 normals.push(n1[0],n1[1],n1[2]);
-              
-
-
-                //addVertex(p1,p2,p1next,n1,n2,n1next);
-                //addVertex(p1next,p2,p2next,n1next,n2,n2next);
-                //tris += 2;
-            }         
+                inFrame(s1, sn1, frames.normals[i], frames.binormals[i], this.pos[i]);
+            }
         }
 
-        for (var i = 0; i < this.count-2; i++) {
-            for (var j = 0; j<shapeCount-1; j++) {
-                var p1 = i*(shapeCount-1)  + j;
-                var p2 = i*(shapeCount-1)  + j + 1;
-                var p1next = (i+1)*(shapeCount-1)  + j;
-                var p2next = (i+1)*(shapeCount-1)  + j + 1;
-                indices.push(p1,p2,p1next);
-                indices.push(p1next,p2,p2next);
-            }         
+        //var end = performance.now();
+        //console.log('Building geometry 1 took ' + (end - start) + ' ms. ');
+        //start = performance.now();
+
+        var ind = 0;
+        for (var i = 0; i < this.count - 2; i++) {
+            for (var j = 0; j < shapeCount - 1; j++) {
+                var p1 = i * (shapeCount - 1) + j;
+                var p2 = p1 + 1;
+                var p1next = p1 + (shapeCount - 1);
+                var p2next = p1next + 1;
+                indices[ind++]  =p1;
+                indices[ind++]  =p2;
+                indices[ind++]  =p1next;
+
+                indices[ind++]  =p1next;
+                indices[ind++]  =p2;
+                indices[ind++]  =p2next;
+            }
         }
 
+
+        //var end = performance.now();
+        //console.log('Building geometry 2 took ' + (end - start) + ' ms. (' + ind/3 + " triangles, " + positions.length / 3 + " vertices.");
+        //start = performance.now();
+        
         function disposeArray() { this.array = null; }
         geometry.setIndex(indices);
-        geometry.setDrawRange(0,indices.length);
-        geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ).onUpload( disposeArray ) );
-        geometry.addAttribute( 'normal', new THREE.Float32BufferAttribute( normals, 3 ).onUpload( disposeArray ) );
-        //geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ).onUpload( disposeArray ) );
-        geometry.computeBoundingSphere();
-
+        geometry.setDrawRange(0, indices.length);
+        geometry.addAttribute('position', new THREE.Float32BufferAttribute(positions, 3).onUpload(disposeArray));
+        geometry.addAttribute('normal', new THREE.Float32BufferAttribute(normals, 3).onUpload(disposeArray));
+      
         var end = performance.now();
-        console.log('Building geometry took ' + (end - start) + ' ms. (' + tris + " triangles added).");
+        console.log('Building geometry took ' + (end - start) + ' ms. (' + ind/3 + " triangles, " + positions.length / 3 + " vertices.");
         return geometry;
     },
 
@@ -223,22 +223,22 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
         }
         p.multiplyScalar(-1.0 / this.pos.length);
 
-        
+
         for (var i = 0; i < this.pos.length; i++) {
             this.pos[i].add(p);
         }
-        
+
         var bb = new THREE.Box3();
         bb.setFromPoints(this.pos);
-        var maxDim = Math.max(bb.getSize().x,bb.getSize().y,bb.getSize().z);
+        var maxDim = Math.max(bb.getSize().x, bb.getSize().y, bb.getSize().z);
         var minY = bb.min.y;
 
 
         // Add attractor specific offset and scaling
-        var offset = new THREE.Vector3(0,-minY,0); // this.attractor.getOffset();
-        var scale = 30.0/maxDim; // this.attractor.getScale();
+        var offset = new THREE.Vector3(0, -minY, 0); // this.attractor.getOffset();
+        var scale = 30.0 / maxDim; // this.attractor.getScale();
         for (var i = 0; i < this.pos.length; i++) {
-          //  this.pos[i].add(p);
+            //  this.pos[i].add(p);
             this.pos[i].add(offset);
             this.pos[i].multiplyScalar(scale);
         }
