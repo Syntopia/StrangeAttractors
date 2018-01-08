@@ -52,7 +52,6 @@
 			/* Full height */
 			overflow: auto;
 			/* Enable scroll if needed */
-			background-color: rgb(0, 0, 0);
 			/* Fallback color */
 			background-color: rgba(0, 0, 0, 0.4);
 			/* Black w/ opacity */
@@ -61,8 +60,8 @@
 		/* Modal Content */
 
 		.modal-content {
-			background-color: #333333;
-			color: #ddf;
+			background-color: rgba(30, 30, 50, 0.8);
+			color: #fff;
 			margin: auto;
 			padding: 20px;
 			border: 1px solid #888;
@@ -240,6 +239,8 @@
 
 		var attractors = getAttractors();
 		var attractor = attractors[0];
+		var wireframeMaterial = new THREE.MeshBasicMaterial();
+		wireframeMaterial.wireframe = true;
 
 		functionExamplesDiv.insertAdjacentHTML('beforeend', "<h3>Select attractor</h3>");
 		for (var i = 0; i < attractors.length; i++) {
@@ -251,11 +252,9 @@
 				scene.remove(mesh);
 				mesh.geometry.dispose();
 			}
-			var path = new AttractorCurve(125000, attractor);
+			var path = new AttractorCurve(params.steps*1000, attractor, params.radius, params.stepSize);
 			path.init();
-			//var m = new THREE.MeshBasicMaterial();
-			//m.wireframe = true;
-			mesh = new THREE.Mesh(path.getGeometry(), standardMaterial);
+			mesh = new THREE.Mesh(path.getGeometry(), params.wireframe ? wireframeMaterial : standardMaterial);
 			mesh.receiveShadow = true;
 			mesh.castShadow = true;
 			scene.add(mesh);
@@ -341,9 +340,18 @@
 			bloomRadius: 0.4,
 			metalness: 0.1,
 			onlyAO: false,
-			radius: 32,
+			aoRadius: 13,
 			aoClamp: 1,
 			lumInfluence: 0.7,
+			nIntensity: 0.3,
+			sIntensity: 0.2,
+			wireframe: false,
+			steps: 50,
+			radius: 0.1,
+			stepSize: 0.02,
+			rebuildGeometry : function() {
+				updateAttractor();
+			}
 		};
 		var camera, scene, renderer, controls;
 		var effectFXAA, bloomPass, renderScene;
@@ -352,16 +360,13 @@
 		var standardMaterial;
 		var hdrCubeRenderTarget;
 		var mesh;
+		var effectFilm;
 
 		var globalMax = 0;
 		init();
-		updateParameters();
 
 		animate();
 		var totalSamples = 0;
-
-		function updateParameters() {
-		}
 
 
 		function init() {
@@ -469,10 +474,10 @@
 			var effectVignette = new THREE.ShaderPass(shaderVignette);
 			effectVignette.uniforms["offset"].value = 0.95;
 			effectVignette.uniforms["darkness"].value = 2.0;
-			var effectFilm = new THREE.FilmPass(0.55, 0.525, 1048, false);
+			effectFilm = new THREE.FilmPass(params.nIntensity, params.sIntensity,  window.innerHeight, false);
 
 			ssaoPass = new THREE.SSAOPass(scene, camera);
-			ssaoPass.radius = params.radius;
+			ssaoPass.radius = params.aoRadius;
 			ssaoPass.aoClamp = params.aoClamp;
 			ssaoPass.lumInfluence = params.lumInfluence;
 
@@ -503,25 +508,51 @@
 
 			var gui = new dat.GUI();
 
-			gui.add(params, 'exposure', 0.1, 2);
-			gui.add(params, 'bloomThreshold', 0.0, 1.0).onChange(function (value) {
+			var bloomFolder = gui.addFolder('Bloom and Exposure');
+			bloomFolder.add(params, 'exposure', 0.1, 2).name("Exposure");
+			bloomFolder.add(params, 'bloomThreshold', 0.0, 1.0).name("Bloom threshold").onChange(function (value) {
 				bloomPass.threshold = Number(value);
 			});
-			gui.add(params, 'bloomStrength', 0.0, 3.0).onChange(function (value) {
+			bloomFolder.add(params, 'bloomStrength', 0.0, 3.0).name("Bloom strength").onChange(function (value) {
 				bloomPass.strength = Number(value);
 			});
-			gui.add(params, 'bloomRadius', 0.0, 1.0).onChange(function (value) {
+			bloomFolder.add(params, 'bloomRadius', 0.0, 1.0).name("Bloom radius").onChange(function (value) {
 				bloomPass.radius = Number(value);
 			});
-			gui.add(params, 'metalness', 0.0, 1.0).onChange(function (value) {
+
+
+			var materialFolder = gui.addFolder('Material');
+			materialFolder.add(params, 'metalness', 0.0, 1.0).name("Metalness").onChange(function (value) {
 				if (mesh.material !== undefined)
 					mesh.material.metalness = Number(value);
 			});
+			materialFolder.add(params, 'wireframe').name("Wireframe").onChange(function (value) {
+				updateAttractor();
+			});
+			var geometryFolder = gui.addFolder('Geometry');
+			geometryFolder.add(params, 'steps', 0, 1000,1).name("Steps (thousands)").onChange(function (value) {
+				//updateAttractor();
+			});
+			geometryFolder.add(params, 'radius',0.0001,1.0).name("Radius").onChange(function (value) {
+				//updateAttractor();
+			});
+			geometryFolder.add(params, 'stepSize',0.001,0.1).name("Step size").onChange(function (value) {
+				//updateAttractor();
+			});
+			geometryFolder.add(params, 'rebuildGeometry');
+			var scanLinesFolder = gui.addFolder('Scan Lines');
+			scanLinesFolder.add(params, 'nIntensity', 0, 1.0).name("Noise level").onChange(function (value) {
+				effectFilm.uniforms.nIntensity.value = Number(value);
+			});
+			scanLinesFolder.add(params, 'sIntensity', 0, 1.0).name("Scan lines").onChange(function (value) {
+				effectFilm.uniforms.sIntensity.value = Number(value);
+			});
 
-			gui.add(params, 'onlyAO', false).onChange(function (value) { ssaoPass.onlyAO = value; });
-			gui.add(params, 'radius').min(0).max(64).onChange(function (value) { ssaoPass.radius = value; });
-			gui.add(params, 'aoClamp').min(0).max(1).onChange(function (value) { ssaoPass.aoClamp = value; });
-			gui.add(params, 'lumInfluence').min(0).max(1).onChange(function (value) { ssaoPass.lumInfluence = value; });
+			var ssaoFolder = gui.addFolder('SSAO');
+			ssaoFolder.add(params, 'onlyAO', false).name("Only AO").onChange(function (value) { ssaoPass.onlyAO = value; });
+			ssaoFolder.add(params, 'aoRadius').name("AO radius").min(0).max(64).onChange(function (value) { ssaoPass.radius = value; });
+			ssaoFolder.add(params, 'aoClamp').name("AO clamp").min(0).max(1).onChange(function (value) { ssaoPass.aoClamp = value; });
+			ssaoFolder.add(params, 'lumInfluence').name("lumInfluence").min(0).max(1).onChange(function (value) { ssaoPass.lumInfluence = value; });
 			gui.open();
 		}
 
@@ -534,6 +565,7 @@
 			ssaoPass.setSize(width, height);
 			renderer.setSize(width, height);
 			composer.setSize(width, height);
+			effectFilm.uniforms.sCount.value= height*2;
 			effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
 		}
 
