@@ -335,6 +335,7 @@
 			projection: 'normal',
 			background: false,
 			exposure: 1.2,
+			bloomEnabled: true,
 			bloomStrength: 1.9,
 			bloomThreshold: 0.85,
 			bloomRadius: 0.4,
@@ -351,7 +352,12 @@
 			stepSize: 0.02,
 			rebuildGeometry : function() {
 				updateAttractor();
-			}
+			},
+			vignetteEnabled: true,
+			ssaoEnabled: true,
+			fxaoEnabled: true,
+			filmEnabled: true,
+			shadowEnabled: true,
 		};
 		var camera, scene, renderer, controls;
 		var effectFXAA, bloomPass, renderScene;
@@ -508,6 +514,31 @@
 
 			var gui = new dat.GUI();
 
+			var effectFolder = gui.addFolder('Effects');
+			effectFolder.add(params, 'bloomEnabled').name("Bloom").onChange(function (value) {
+				bloomPass.enabled = value;
+			});
+			effectFolder.add(params, 'vignetteEnabled').name("Vignette").onChange(function (value) {
+				effectVignette.enabled = value;
+			});
+			effectFolder.add(params, 'ssaoEnabled').name("SSAO").onChange(function (value) {
+				ssaoPass.enabled = value;
+			});
+			effectFolder.add(params, 'fxaoEnabled').name("FXAA").onChange(function (value) {
+				effectFXAA.enabled = value;
+			});
+			effectFolder.add(params, 'filmEnabled').name("Film").onChange(function (value) {
+				effectFilm.enabled = value;
+			});
+		//	effectFolder.add(params, 'shadowEnabled').name("Shadows").onChange(function (value) {
+		//		renderer.shadowMapAutoUpdate = value;
+		//		renderer.clearTarget( spotLight.shadow );
+		//	});
+			
+			
+
+			
+
 			var bloomFolder = gui.addFolder('Bloom and Exposure');
 			bloomFolder.add(params, 'exposure', 0.1, 2).name("Exposure");
 			bloomFolder.add(params, 'bloomThreshold', 0.0, 1.0).name("Bloom threshold").onChange(function (value) {
@@ -539,7 +570,7 @@
 			geometryFolder.add(params, 'stepSize',0.001,0.1).name("Step size").onChange(function (value) {
 				//updateAttractor();
 			});
-			geometryFolder.add(params, 'rebuildGeometry');
+			geometryFolder.add(params, 'rebuildGeometry').name("Rebuild geometry");
 			var scanLinesFolder = gui.addFolder('Scan Lines');
 			scanLinesFolder.add(params, 'nIntensity', 0, 1.0).name("Noise level").onChange(function (value) {
 				effectFilm.uniforms.nIntensity.value = Number(value);
@@ -550,9 +581,9 @@
 
 			var ssaoFolder = gui.addFolder('SSAO');
 			ssaoFolder.add(params, 'onlyAO', false).name("Only AO").onChange(function (value) { ssaoPass.onlyAO = value; });
-			ssaoFolder.add(params, 'aoRadius').name("AO radius").min(0).max(64).onChange(function (value) { ssaoPass.radius = value; });
-			ssaoFolder.add(params, 'aoClamp').name("AO clamp").min(0).max(1).onChange(function (value) { ssaoPass.aoClamp = value; });
-			ssaoFolder.add(params, 'lumInfluence').name("lumInfluence").min(0).max(1).onChange(function (value) { ssaoPass.lumInfluence = value; });
+			ssaoFolder.add(params, 'aoRadius').name("AO radius").min(0).max(64).name("AO radius").onChange(function (value) { ssaoPass.radius = value; });
+			ssaoFolder.add(params, 'aoClamp').min(0).max(1).name("AO clamp").onChange(function (value) { ssaoPass.aoClamp = value; });
+			ssaoFolder.add(params, 'lumInfluence').min(0).max(1).name("Lum influence").onChange(function (value) { ssaoPass.lumInfluence = value; });
 			gui.open();
 		}
 
