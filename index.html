@@ -596,7 +596,7 @@
 			ssaoPass.setSize(width, height);
 			renderer.setSize(width, height);
 			composer.setSize(width, height);
-			effectFilm.uniforms.sCount.value= height*2;
+			effectFilm.uniforms.sCount.value= height;
 			effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
 		}
 
