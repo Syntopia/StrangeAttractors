@@ -23,10 +23,17 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+// ----------------------------------------------------------------------------
+
+/*
+Formulas found in:
+http://www.algosome.com/articles/aizawa-attractor-chaos.html
+https://www.behance.net/gallery/7618879/Strange-Attractors
+*/
+
+
 // ---------------------------------- Aizawa ----------------------------------
 
-// Formula from here: http://www.algosome.com/articles/aizawa-attractor-chaos.html
-// See also: https://www.behance.net/gallery/7618879/Strange-Attractors
 function Aizawa() {
     this.a = 0.95;
     this.b = 0.7;
@@ -53,7 +60,7 @@ Aizawa.prototype = Object.assign(Aizawa.prototype, {
 
 // ---------------------------- Rucklidge -------------------------------------------
 
-// See: https://www.behance.net/gallery/7618879/Strange-Attractors
+
 function Rucklidge() {
     this.kappa = 2;
     this.alpha = 6.7;
@@ -75,14 +82,9 @@ Rucklidge.prototype = Object.assign(Rucklidge.prototype, {
     },
 });
 
+// ---------------------------- Lorentz -------------------------------------------
 
 
-/*
-* See: http://www.algosome.com/articles/lorenz-attractor-programming-code.html
-*/
-
-
-// See: https://www.behance.net/gallery/7618879/Strange-Attractors
 function Lorentz() {
     this.a = 10.0;
     this.b = 28.0;
@@ -106,9 +108,7 @@ Lorentz.prototype = Object.assign(Lorentz.prototype, {
 });
 
 
-/**
- * Chen Lee
- */
+// ---------------------------- Chen Lee -------------------------------------------
 
 function ChenLee() {
     this.a = 5;

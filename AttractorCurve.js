@@ -120,7 +120,6 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
 
     getGeometry: function () {
         var start = performance.now();
-
         
         var shape = this.get2DShape();
         var shapeCount = shape.points.length;
@@ -164,10 +163,6 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
             }
         }
 
-        //var end = performance.now();
-        //console.log('Building geometry 1 took ' + (end - start) + ' ms. ');
-        //start = performance.now();
-
         var ind = 0;
         for (var i = 0; i < this.count - 2; i++) {
             for (var j = 0; j < shapeCount - 1; j++) {
@@ -185,16 +180,13 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
             }
         }
 
-
-        //var end = performance.now();
-        //console.log('Building geometry 2 took ' + (end - start) + ' ms. (' + ind/3 + " triangles, " + positions.length / 3 + " vertices.");
-        //start = performance.now();
-        
         function disposeArray() { this.array = null; }
         geometry.setIndex(indices);
         geometry.setDrawRange(0, indices.length);
-        geometry.addAttribute('position', new THREE.Float32BufferAttribute(positions, 3).onUpload(disposeArray));
-        geometry.addAttribute('normal', new THREE.Float32BufferAttribute(normals, 3).onUpload(disposeArray));
+
+        // We cannot dispose of arrays, if we want the STL and OBJ exporters to work :-(
+        geometry.addAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); //.onUpload(disposeArray));
+        geometry.addAttribute('normal', new THREE.Float32BufferAttribute(normals, 3)); //.onUpload(disposeArray));
       
         var end = performance.now();
         console.log('Building geometry took ' + (end - start) + ' ms. (' + ind/3 + " triangles, " + positions.length / 3 + " vertices.");
