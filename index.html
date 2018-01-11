@@ -304,7 +304,7 @@
 				scene.remove(mesh);
 				mesh.geometry.dispose();
 			}
-			var path = new AttractorCurve(params.steps * 1000, attractor, params.radius, params.stepSize);
+			var path = new AttractorCurve(params.steps * 1000, attractor, params.radius, params.stepSize, params.facets);
 			path.init();
 			mesh = new THREE.Mesh(path.getGeometry(), params.wireframe ? wireframeMaterial : standardMaterial);
 			mesh.receiveShadow = true;
@@ -467,7 +467,8 @@
 			clearCoatRoughness: 0.01,
 			reflectivity: 0.1,
 			metalness: 0.10,
-			roughness: 0.8
+			roughness: 0.8,
+			facets: 4,
 		};
 		var camera, scene, renderer, controls;
 		var effectFXAA, bloomPass, renderScene;
@@ -713,6 +714,9 @@
 				//updateAttractor();
 			});
 			geometryFolder.add(params, 'stepSize', 0.001, 0.1).name("Step size").onChange(function (value) {
+				//updateAttractor();
+			});
+			geometryFolder.add(params, 'facets', 3, 8,1).name("Tube facets").onChange(function (value) {
 				//updateAttractor();
 			});
 			geometryFolder.add(params, 'rebuildGeometry').name("Rebuild geometry");

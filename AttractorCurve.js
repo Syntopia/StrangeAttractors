@@ -25,7 +25,7 @@ SOFTWARE.
 */
 
 
-function AttractorCurve(count, attractor, radius, timeStep) {
+function AttractorCurve(count, attractor, radius, timeStep, facets) {
     THREE.Curve.call(this);
     this.type = 'AttractorCurve';
     this.autoClose = false; // Automatically closes the path
@@ -36,6 +36,7 @@ function AttractorCurve(count, attractor, radius, timeStep) {
     this.attractor = attractor;
     this.radius = radius;
     this.timeStep = timeStep;
+    this.facets = facets;
 }
 
 AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
@@ -102,13 +103,12 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
 
     get2DShape: function () {
         var size = this.radius;
-        var points = [], numPts = 2;
+        var points = [];
         var normals = [];
-        for (var i = 0; i < numPts * 2 + 1; i++) {
-            var l = i % 2 == 1 ? 1 * size : 1.0 * size;
-            var a = i / numPts * Math.PI;
-            points.push([Math.cos(a) * l, Math.sin(a) * l]);
-            normals.push([Math.cos(a) * l, Math.sin(a) * l]);
+        for (var i = 0; i < this.facets + 1; i++) {
+            var a = i / (this.facets/2) * Math.PI;
+            points.push([Math.cos(a) * size, Math.sin(a) * size]);
+            normals.push([Math.cos(a) * size, Math.sin(a) * size]);
         }
 
         return {
