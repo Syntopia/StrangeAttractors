@@ -200,9 +200,9 @@
 
 				<a href="javascript:showAbout();">More...</a>
 
-			</p/>
-			<p>
-			</p>
+				</p/>
+				<p>
+				</p>
 	</div>
 	<div id="container"></div>
 	<script src="js/three.min.js" type="text/javascript"></script>
@@ -474,6 +474,7 @@
 			metalness: 0.10,
 			roughness: 0.8,
 			facets: 4,
+			showFPS: false,
 		};
 		var camera, scene, renderer, controls;
 		var effectFXAA, bloomPass, renderScene;
@@ -620,13 +621,11 @@
 			renderer.gammaOutput = true;
 
 			stats = new Stats();
-			container.appendChild(stats.dom);
-
+			
 			controls = new THREE.OrbitControls(camera, renderer.domElement);
 			controls.update();
 			controls.autoRotate = false;
 			controls.enableDamping = true;
-
 			window.addEventListener('resize', onWindowResize, false);
 
 			var gui = new dat.GUI();
@@ -712,7 +711,7 @@
 				updateAttractor();
 			});
 			var geometryFolder = gui.addFolder('Geometry');
-			geometryFolder.add(params, 'steps', 0, 1000, 1).name("Steps (thousands)").onChange(function (value) {
+			geometryFolder.add(params, 'steps', 1, 500, 1).name("Steps (thousands)").onChange(function (value) {
 				//updateAttractor();
 			});
 			geometryFolder.add(params, 'radius', 0.0001, 1.0).name("Radius").onChange(function (value) {
@@ -738,6 +737,15 @@
 			ssaoFolder.add(params, 'aoRadius').name("AO radius").min(0).max(64).name("AO radius").onChange(function (value) { ssaoPass.radius = value; });
 			ssaoFolder.add(params, 'aoClamp').min(0).max(1).name("AO clamp").onChange(function (value) { ssaoPass.aoClamp = value; });
 			ssaoFolder.add(params, 'lumInfluence').min(0).max(1).name("Lum influence").onChange(function (value) { ssaoPass.lumInfluence = value; });
+
+			gui.add(params, 'showFPS', 0.0, 1.0).name("Show FPS").onChange(function (value) {
+				if (!value) {
+					container.removeChild(stats.dom);
+				} else {
+					container.appendChild(stats.dom);
+				};
+			});
+
 			gui.open();
 		}
 
