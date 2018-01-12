@@ -624,6 +624,7 @@
 			
 			controls = new THREE.OrbitControls(camera, renderer.domElement);
 			controls.update();
+			controls.rotateSpeed = 0.3;
 			controls.autoRotate = false;
 			controls.enableDamping = true;
 			window.addEventListener('resize', onWindowResize, false);
