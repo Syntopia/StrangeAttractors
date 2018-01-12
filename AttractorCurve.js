@@ -24,6 +24,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+var assert = function(condition) { 
+    if (!condition) {
+        debugger;
+        throw Error("Assert failed" + (typeof message !== "undefined" ? ": " + message : ""));
+    }
+};
 
 function AttractorCurve(count, attractor, radius, timeStep, facets) {
     THREE.Curve.call(this);
@@ -32,7 +38,7 @@ function AttractorCurve(count, attractor, radius, timeStep, facets) {
     this.pos = [];
     this.normals = [];
     this.tangents = [];
-    this.count = count;
+    this.count = count ;
     this.attractor = attractor;
     this.radius = radius;
     this.timeStep = timeStep;
@@ -48,9 +54,9 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
 
         this.pos = new Array(this.count);
         this.tangents = new Array(this.count);
-        
+
         var p = [0, 1, 1];
-        var t =  this.timeStep;
+        var t = this.timeStep;
         var subAdvance = 2;
 
         // Warmup
@@ -65,7 +71,7 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
         // advancing this using the attractor equation. This gives us a new normal point, which is made orthogonal to the tangent.
         // This creates a smooth orthogonal frame (I did try Frenet frames (normals based on acceleration), but that will not work for near-linear stretches)
         for (var i = 0; i < this.count; i++) {
-            var old = [p[0],p[1],p[2]];
+            var old = [p[0], p[1], p[2]];
 
             // A bit higher resolution by taking smaller steps
             for (var j = 0; j < subAdvance; j++)
@@ -106,7 +112,7 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
         var points = [];
         var normals = [];
         for (var i = 0; i < this.facets + 1; i++) {
-            var a = i / (this.facets/2) * Math.PI;
+            var a = i / (this.facets / 2) * Math.PI;
             points.push([Math.cos(a) * size, Math.sin(a) * size]);
             normals.push([Math.cos(a) * size, Math.sin(a) * size]);
         }
@@ -120,15 +126,17 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
 
     getGeometry: function () {
         var start = performance.now();
-        
+
         var shape = this.get2DShape();
         var shapeCount = shape.points.length;
 
         var geometry = new THREE.BufferGeometry();
-        var positions = new Array(this.count*(shapeCount-1)*3);
-        var normals = new Array(this.count*(shapeCount-1)*3);
+        var vertexCount = this.count * (shapeCount - 1) * 3 + 2 * 3; // +2*3 for caps
+        var positions = new Array(vertexCount); 
+        var normals = new Array(vertexCount);
         var colors = [];
-        var indices = new Array((this.count - 2)*(shapeCount-1));
+        var indicesCount = (this.count - 1 + 6) * (shapeCount - 1) * 6 ;
+        var indices = new Array(indicesCount);
 
         var frames = this.getFrames();
 
@@ -164,22 +172,56 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
         }
 
         var ind = 0;
-        for (var i = 0; i < this.count - 2; i++) {
+        for (var i = 0; i < this.count - 1; i++) {
             for (var j = 0; j < shapeCount - 1; j++) {
                 var p1 = i * (shapeCount - 1) + j;
-                var p2 = p1 + 1;
+                var p2 = (j == shapeCount - 2) ? p1 - (shapeCount - 2) : p1 + 1;
                 var p1next = p1 + (shapeCount - 1);
-                var p2next = p1next + 1;
-                indices[ind++]  =p1;
-                indices[ind++]  =p2;
-                indices[ind++]  =p1next;
+                var p2next = (j == shapeCount - 2) ? p1next - (shapeCount - 2) : p1next + 1;
+                indices[ind++] = p1;
+                indices[ind++] = p2;
+                indices[ind++] = p1next;
 
-                indices[ind++]  =p1next;
-                indices[ind++]  =p2;
-                indices[ind++]  =p2next;
+                indices[ind++] = p1next;
+                indices[ind++] = p2;
+                indices[ind++] = p2next;
             }
         }
 
+        // Create endcaps
+        var firstPos = this.pos[0];
+        var lastPos = this.pos[this.pos.length - 1];
+        positions[p++] = firstPos.x;
+        positions[p++] = firstPos.y;
+        positions[p++] = firstPos.z;
+        normals[n++] = -frames.tangents[0].x;
+        normals[n++] = -frames.tangents[0].y;
+        normals[n++] = -frames.tangents[0].z;
+        positions[p++] = lastPos.x;
+        positions[p++] = lastPos.y;
+        positions[p++] = lastPos.z;
+        normals[n++] = frames.tangents[this.pos.length - 1].x;
+        normals[n++] = frames.tangents[this.pos.length - 1].y;
+        normals[n++] = frames.tangents[this.pos.length - 1].z;
+        for (var j = 0; j < shapeCount - 1; j++) {
+            var p1 = j;
+            var p2 = (j == shapeCount - 2) ? 0 : j + 1;
+            var p3 = positions.length / 3 - 2;
+            indices[ind++] = p2;
+            indices[ind++] = p1;
+            indices[ind++] = p3;
+
+            p1 = j + positions.length / 3 - (shapeCount - 1) - 2;
+            p2 = (j == shapeCount - 2) ? positions.length / 3 - (shapeCount - 1) - 2 : p1 + 1;
+            p3 = positions.length / 3 - 1;
+            indices[ind++] = p1;
+            indices[ind++] = p2;
+            indices[ind++] = p3;
+        }
+
+        assert(indicesCount == indices.length);
+        assert(vertexCount == positions.length);
+        
         function disposeArray() { this.array = null; }
         geometry.setIndex(indices);
         geometry.setDrawRange(0, indices.length);
@@ -187,9 +229,9 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
         // We cannot dispose of arrays, if we want the STL and OBJ exporters to work :-(
         geometry.addAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); //.onUpload(disposeArray));
         geometry.addAttribute('normal', new THREE.Float32BufferAttribute(normals, 3)); //.onUpload(disposeArray));
-      
+
         var end = performance.now();
-        console.log('Building geometry took ' + (end - start) + ' ms. (' + ind/3 + " triangles, " + positions.length / 3 + " vertices.");
+        console.log('Building geometry took ' + (end - start) + ' ms. (' + ind / 3 + " triangles, " + positions.length / 3 + " vertices.");
         return geometry;
     },
 

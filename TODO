@@ -1,5 +1,8 @@
 MVP:
-- Cap geometry
+- Disable/Enable FPS
+- Better cap normals
+- Check links
+- Browser support
 
 Future:
 - Add more attractors
