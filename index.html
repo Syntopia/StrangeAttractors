@@ -242,7 +242,6 @@
 	<script src="js/OBJExporter.js" type="text/javascript"></script>
 	<script src="js/STLExporter.js" type="text/javascript"></script>
 	<script type="text/javascript" src="https://fastcdn.org/FileSaver.js/1.1.20151003/FileSaver.js"></script>
-
 	<div id="functionExamples" class="modal">
 		<div id="functionExamplesDiv" class="modal-content">
 
@@ -258,25 +257,29 @@
 			<a href="http://www.hvidtfeldts.net" target="_blank">homepage</a>)
 
 			<p>
-				<a class=toggle href='javascript:saveAsImage();'>Save attractor as image (JPG)</a>
+				<a class=toggle href='javascript:saveAsImage();'>Save attractor as image (JPG)</a> (or press 'return')
 				<br />
 				<a class=toggle href='javascript:exportAsObj();'>Save attractor as 3D (OBJ)</a>
 				<br />
 				<a class=toggle href='javascript:exportAsStl();'>Save attractor as 3D (STL)</a>
 			</p>
+			<p><br /></p>
 			<p>
-				<b>Code</b>
-				<br /> Inspired by the wonderful
-				<a href="https://www.behance.net/gallery/7618879/Strange-Attractors" target="_blank">renderings by Chaotic Atmosphere</a>
+				<b>Attribution</b>
 				<br /> Source code for this project
 				<a href="https://github.com/Syntopia/StrangeAttractors" target="_blank">on Github</a>.
-				<br> 3D graphics using
+				<br /> Inspired by the wonderful
+				<a href="https://www.behance.net/gallery/7618879/Strange-Attractors" target="_blank">renderings by Chaotic Atmosphere</a>
+				<br /> Formulas from Jürgen Meier:
+				<a href="http://www.3d-meier.de/tut19/Seite300.html" target="_blank">code</a> /
+			    <a href="http://www.3d-meier.de/tut19/Seite0.html" target="_blank">descriptions</a>
+			    <br> 3D graphics using
 				<a href="https://threejs.org/" target="_blank">three.js</a>.
 				<br> GUI using
 				<a href="https://github.com/dataarts/dat.gui" target="_blank">dat.gui</a>.
 			</p>
 			<br/>
-			<p>Version 0.99 - Jan 11, 2018.</p>
+			<p>Version 1.0 - Jan 13, 2018.</p>
 		</div>
 	</div>
 
@@ -324,6 +327,8 @@
 			mesh.receiveShadow = true;
 			mesh.castShadow = true;
 			scene.add(mesh);
+
+			
 		}
 
 		function setAttractor(index) {
@@ -337,6 +342,11 @@
 			}
 
 			updateAttractor();
+
+			if (controls != undefined) {
+				var center = new THREE.Box3().setFromObject(mesh).getCenter();
+				controls.target.set(center.x,center.y,center.z);
+			}
 
 			var elem = document.querySelector('.dynamicUI');
 			while (elem !== null) {
@@ -402,21 +412,23 @@
 			saveAs(blob, 'attractor.stl');
 		}
 
-		// FROM: https://stackoverflow.com/questions/26193702/three-js-how-can-i-make-a-2d-snapshot-of-a-scene-as-a-jpg-image
+		document.addEventListener("keypress", function(event) {
+  			  if (event.keyCode == 13) {
+					saveAsImage();
+    			}
+		});
+
 		function saveAsImage() {
 			var imgData, imgNode;
 
 			try {
-				var strMime = "image/jpeg";
-				imgData = renderer.domElement.toDataURL(strMime);
-
-				saveFile(imgData.replace(strMime, "image/octet-stream"), "test.jpg");
-
+				renderer.domElement.toBlob(function(blob) {
+    				saveAs(blob, "attractor.png");
+				});
 			} catch (e) {
 				console.log(e);
 				return;
 			}
-
 		}
 
 		var saveFile = function (strData, filename) {
@@ -442,39 +454,40 @@
 		var params = {
 			projection: 'normal',
 			background: false,
-			exposure: 1.2,
-			bloomEnabled: true,
-			bloomStrength: 1.9,
-			bloomThreshold: 0.85,
-			bloomRadius: 0.4,
-			metalness: 0.1,
-			onlyAO: false,
-			aoRadius: 13,
-			aoClamp: 1,
-			lumInfluence: 0.7,
-			nIntensity: 0.3,
-			sIntensity: 0.2,
-			wireframe: false,
-			steps: 50,
-			radius: 0.1,
-			stepSize: 0.02,
+		
 			rebuildGeometry: function () {
 				updateAttractor();
 			},
-			vignetteEnabled: true,
-			ssaoEnabled: true,
-			fxaoEnabled: true,
-			filmEnabled: true,
-			shadowEnabled: true,
-			color: 0xffaa77,
-			groundColor: 0xaaaaaa,
-			clearCoat: 0.98,
-			clearCoatRoughness: 0.01,
-			reflectivity: 0.1,
-			metalness: 0.10,
-			roughness: 0.8,
-			facets: 4,
-			showFPS: false,
+		
+
+			"showFPS": false,
+			"bloomEnabled": true,
+			"vignetteEnabled": false,
+			"ssaoEnabled": true,
+			"fxaoEnabled": true,
+			"filmEnabled": true,
+			"exposure": 1.23,
+			"bloomThreshold": 0.849,
+			"bloomStrength": 0.7940718127666893,
+			"bloomRadius": 1,
+			"metalness": 0.286,
+			"clearCoat": 0.33,
+			"clearCoatRoughness": 0.363,
+			"reflectivity": 0.1,
+			"roughness": 0.507,
+			"color": 16777215,
+			"groundColor": 10988799,
+			"wireframe": false,
+			"steps": 50,
+			"radius": 0.1,
+			"stepSize": 0.02,
+			"facets": 4,
+			"nIntensity": 0.099,
+			"sIntensity": 0.154,
+			"onlyAO": false,
+			"aoRadius": 22.586,
+			"aoClamp": 1,
+			"lumInfluence": 1
 		};
 		var camera, scene, renderer, controls;
 		var effectFXAA, bloomPass, renderScene;
@@ -497,8 +510,8 @@
 			document.body.appendChild(container);
 
 			camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 2000);
-			camera.position.set(0.0, 35, 35 * 3.5);
-
+			camera.position.set(0.0, 50*0.5, 100*0.5);
+		
 			scene = new THREE.Scene();
 
 			renderer = new THREE.WebGLRenderer({
@@ -509,12 +522,12 @@
 			renderer.toneMapping = THREE.LinearToneMapping;
 			standardMaterial = new THREE.MeshPhysicalMaterial({
 				map: null,
-				color: 0xffaa77,
-				clearCoat: 1.0,
-				clearCoatRoughness: 0.0,
-				reflectivity: 0.1,
-				metalness: 0.10,
-				roughness: 0.0,
+				color: params.color,
+				clearCoat: params.clearCoat,
+				clearCoatRoughness: params.clearCoatRoughness,
+				reflectivity: params.reflectivity,
+				metalness: params.metalness,
+				roughness: params.roughness,
 				bumpScale: 0.0,
 			});
 
@@ -522,7 +535,7 @@
 
 			var groundMaterial = new THREE.MeshStandardMaterial({
 				map: null,
-				color: 0xaaaaaa,
+				color: params.groundColor,
 				metalness: 0.00,
 				roughness: 1.0
 			});
@@ -623,10 +636,16 @@
 			stats = new Stats();
 			
 			controls = new THREE.OrbitControls(camera, renderer.domElement);
-			controls.update();
+			//controls.target.set(0, 15, 0);
+
+			var center = new THREE.Box3().setFromObject(mesh).getCenter();
+			controls.target.set(center.x,center.y,center.z);
+
 			controls.rotateSpeed = 0.3;
 			controls.autoRotate = false;
 			controls.enableDamping = true;
+			controls.update();
+
 			window.addEventListener('resize', onWindowResize, false);
 
 			var gui = new dat.GUI();
@@ -715,7 +734,7 @@
 			geometryFolder.add(params, 'steps', 1, 500, 1).name("Steps (thousands)").onChange(function (value) {
 				//updateAttractor();
 			});
-			geometryFolder.add(params, 'radius', 0.0001, 1.0).name("Radius").onChange(function (value) {
+			geometryFolder.add(params, 'radius', 0.01, 1.0).name("Radius").onChange(function (value) {
 				//updateAttractor();
 			});
 			geometryFolder.add(params, 'stepSize', 0.001, 0.1).name("Step size").onChange(function (value) {
@@ -747,6 +766,7 @@
 				};
 			});
 
+			gui.remember(params);
 			gui.open();
 		}
 

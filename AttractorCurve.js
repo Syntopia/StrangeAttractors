@@ -218,7 +218,6 @@ AttractorCurve.prototype = Object.assign(AttractorCurve.prototype, {
             indices[ind++] = p2;
             indices[ind++] = p3;
         }
-
         assert(indicesCount == indices.length);
         assert(vertexCount == positions.length);
         

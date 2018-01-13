@@ -226,7 +226,7 @@ THREE.OrbitControls = function ( object, domElement ) {
 		window.removeEventListener( 'keydown', onKeyDown, false );
 
 		//scope.dispatchEvent( { type: 'dispose' } ); // should this be added here?
-
+		
 	};
 
 	//
