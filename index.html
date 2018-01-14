@@ -231,7 +231,6 @@
 	<script src="js/shaders/UnpackDepthRGBAShader.js"></script>
 
 	<script src="js/shaders/CopyShader.js" type="text/javascript"></script>
-	<script src="js/shaders/FXAAShader.js" type="text/javascript"></script>
 	<script src="js/shaders/SSAOShader.js" type="text/javascript"></script>
 
 	<script src="js/shaders/ConvolutionShader.js" type="text/javascript"></script>
@@ -257,13 +256,16 @@
 			<a href="http://www.hvidtfeldts.net" target="_blank">homepage</a>)
 
 			<p>
-				<a class=toggle href='javascript:saveAsImage();'>Save attractor as image (JPG)</a> (or press 'return')
+				<a class=toggle href='javascript:saveAsImage();'>Save attractor as image (PNG)</a> (or press 'return')
+				<div id="exportSlider"></div>
 				<br />
 				<a class=toggle href='javascript:exportAsObj();'>Save attractor as 3D (OBJ)</a>
 				<br />
 				<a class=toggle href='javascript:exportAsStl();'>Save attractor as 3D (STL)</a>
 			</p>
-			<p><br /></p>
+			<p>
+				<br />
+			</p>
 			<p>
 				<b>Attribution</b>
 				<br /> Source code for this project
@@ -272,8 +274,8 @@
 				<a href="https://www.behance.net/gallery/7618879/Strange-Attractors" target="_blank">renderings by Chaotic Atmosphere</a>
 				<br /> Formulas from Jürgen Meier:
 				<a href="http://www.3d-meier.de/tut19/Seite300.html" target="_blank">code</a> /
-			    <a href="http://www.3d-meier.de/tut19/Seite0.html" target="_blank">descriptions</a>
-			    <br> 3D graphics using
+				<a href="http://www.3d-meier.de/tut19/Seite0.html" target="_blank">descriptions</a>
+				<br> 3D graphics using
 				<a href="https://threejs.org/" target="_blank">three.js</a>.
 				<br> GUI using
 				<a href="https://github.com/dataarts/dat.gui" target="_blank">dat.gui</a>.
@@ -296,6 +298,7 @@
 
 		var attractors = getAttractors();
 		var attractor = attractors[0];
+
 
 		attractorDefaults = [];
 		for (var i = 0; i < attractors.length; i++) {
@@ -328,7 +331,7 @@
 			mesh.castShadow = true;
 			scene.add(mesh);
 
-			
+
 		}
 
 		function setAttractor(index) {
@@ -345,7 +348,7 @@
 
 			if (controls != undefined) {
 				var center = new THREE.Box3().setFromObject(mesh).getCenter();
-				controls.target.set(center.x,center.y,center.z);
+				controls.target.set(center.x, center.y, center.z);
 			}
 
 			var elem = document.querySelector('.dynamicUI');
@@ -398,6 +401,21 @@
 			});
 		}
 
+		function createSliderAlt(container, name, label, defaultValue, min, max) {
+			var html = "<div><span id='" + name + "Label'>" + label + "&nbsp;&nbsp;</span>";
+			html += "<input id='" + name + "Slider' value='" + 100 * (defaultValue - min) / (max - min) + "' type='range' min='0' max='100' style='width: 300px;'>";
+			html += "&nbsp;&nbsp;<span id='" + name + "Value'>" + defaultValue.toFixed(3) + "</span></div>";
+			container.insertAdjacentHTML('beforeend', html);
+
+			var slider = document.getElementById(name + "Slider");
+			var value = document.getElementById(name + "Value");
+			slider.addEventListener('input', function () {
+				var val = slider.value * 0.01 * (max - min) + min;
+				value.innerHTML = "x" + val.toFixed(2) + " (" + Math.round(window.innerWidth * val) + "x" + Math.round(window.innerHeight * val) + "px)";
+				params[name] = val;
+			});
+		}
+
 		function exportAsObj() {
 			var exporter = new THREE.OBJExporter();
 			var obj = exporter.parse(mesh);
@@ -412,19 +430,30 @@
 			saveAs(blob, 'attractor.stl');
 		}
 
-		document.addEventListener("keypress", function(event) {
-  			  if (event.keyCode == 13) {
-					saveAsImage();
-    			}
+		document.addEventListener("keypress", function (event) {
+			if (event.keyCode == 13) {
+				saveAsImage();
+			}
 		});
+
 
 		function saveAsImage() {
 			var imgData, imgNode;
 
 			try {
-				renderer.domElement.toBlob(function(blob) {
-    				saveAs(blob, "attractor.png");
+				var scale = params.exportScale;
+				renderer.setSize(Math.round(window.innerWidth * scale), Math.round(window.innerHeight * scale));
+				
+				// We create a new post-processing step here (but couldn't we just rescale the existing?)
+				var composer = setupPostProcessing(renderer);
+				composer.render(0.01);
+
+				renderer.domElement.toBlob(function (blob) {
+					saveAs(blob, "attractor.png");
 				});
+				renderer.setSize(Math.round(window.innerWidth), Math.round(window.innerHeight));
+				composer.setSize(0, 0);
+				composer = null;
 			} catch (e) {
 				console.log(e);
 				return;
@@ -454,11 +483,10 @@
 		var params = {
 			projection: 'normal',
 			background: false,
-		
+
 			rebuildGeometry: function () {
 				updateAttractor();
 			},
-		
 
 			"showFPS": false,
 			"bloomEnabled": true,
@@ -487,10 +515,11 @@
 			"onlyAO": false,
 			"aoRadius": 22.586,
 			"aoClamp": 1,
-			"lumInfluence": 1
+			"lumInfluence": 1,
+			"exportScale": 2
 		};
 		var camera, scene, renderer, controls;
-		var effectFXAA, bloomPass, renderScene;
+		var bloomPass, renderScene;
 		var hdrCubeMap;
 		var composer, ssaoPass;
 		var standardMaterial;
@@ -504,14 +533,49 @@
 		animate();
 		var totalSamples = 0;
 
+		createSliderAlt(document.getElementById('exportSlider'), "exportScale", "Export Scale Factor", params["exportScale"], 1, 10);
+
+
+		function setupPostProcessing(myRenderer) {
+			var copyShader = new THREE.ShaderPass(THREE.CopyShader);
+			copyShader.renderToScreen = true;
+
+			var effectVignette = new THREE.ShaderPass(THREE.VignetteShader);
+			effectVignette.uniforms["offset"].value = 0.95;
+			effectVignette.uniforms["darkness"].value = 2.0;
+			effectVignette.enabled = params.vignetteEnabled;
+
+			var effectFilm = new THREE.FilmPass(params.nIntensity, params.sIntensity, myRenderer.getSize().height, false);
+
+			var ssaoPass = new THREE.SSAOPass(scene, camera);
+			ssaoPass.radius = params.aoRadius;
+			ssaoPass.aoClamp = params.aoClamp;
+			ssaoPass.lumInfluence = params.lumInfluence;
+
+			var bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(myRenderer.getSize().width, myRenderer.getSize().height), params.bloomStrength, params.bloomRadius, params.bloomThreshold);//1.0, 9, 0.5, 512);
+
+			var composer = new THREE.EffectComposer(myRenderer);
+			composer.setSize(myRenderer.getSize().width, myRenderer.getSize().height);
+			composer.addPass(renderScene);
+			if (params.bloomEnabled && myRenderer != renderer)
+				composer.addPass(bloomPass);
+			if (params.vignetteEnabled && myRenderer != renderer)
+				composer.addPass(effectVignette);
+			if (params.filmEnabled && myRenderer != renderer)
+				composer.addPass(effectFilm);
+			if (params.ssaoEnabled && myRenderer != renderer)
+				composer.addPass(ssaoPass);
+			composer.addPass(copyShader);
+			return composer;
+		}
 
 		function init() {
 			container = document.createElement('div');
 			document.body.appendChild(container);
 
 			camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 2000);
-			camera.position.set(0.0, 50*0.5, 100*0.5);
-		
+			camera.position.set(0.0, 50 * 0.5, 100 * 0.5);
+
 			scene = new THREE.Scene();
 
 			renderer = new THREE.WebGLRenderer({
@@ -519,7 +583,7 @@
 				preserveDrawingBuffer: true
 			});
 			renderer.setClearColor(new THREE.Color(0x000000));
-			renderer.toneMapping = THREE.LinearToneMapping;
+
 			standardMaterial = new THREE.MeshPhysicalMaterial({
 				map: null,
 				color: params.color,
@@ -597,12 +661,13 @@
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.shadowMap.enabled = true;
 			renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+			renderer.toneMapping = THREE.ReinhardToneMapping;
+			renderer.gammaInput = true;
+			renderer.gammaOutput = true;
 
 			container.appendChild(renderer.domElement);
 
 			renderScene = new THREE.RenderPass(scene, camera);
-			effectFXAA = new THREE.ShaderPass(THREE.FXAAShader);
-			effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
 
 			var copyShader = new THREE.ShaderPass(THREE.CopyShader);
 			copyShader.renderToScreen = true;
@@ -611,6 +676,7 @@
 			var effectVignette = new THREE.ShaderPass(shaderVignette);
 			effectVignette.uniforms["offset"].value = 0.95;
 			effectVignette.uniforms["darkness"].value = 2.0;
+			effectVignette.enabled = params.vignetteEnabled;
 			effectFilm = new THREE.FilmPass(params.nIntensity, params.sIntensity, window.innerHeight, false);
 
 			ssaoPass = new THREE.SSAOPass(scene, camera);
@@ -622,24 +688,19 @@
 			composer = new THREE.EffectComposer(renderer);
 			composer.setSize(window.innerWidth, window.innerHeight);
 			composer.addPass(renderScene);
-
-			composer.addPass(effectFXAA);
 			composer.addPass(bloomPass);
 			composer.addPass(effectVignette);
 			composer.addPass(effectFilm);
 			composer.addPass(ssaoPass);
 			composer.addPass(copyShader);
-			renderer.toneMapping = THREE.ReinhardToneMapping;
-			renderer.gammaInput = true;
-			renderer.gammaOutput = true;
+
 
 			stats = new Stats();
-			
+
 			controls = new THREE.OrbitControls(camera, renderer.domElement);
-			//controls.target.set(0, 15, 0);
 
 			var center = new THREE.Box3().setFromObject(mesh).getCenter();
-			controls.target.set(center.x,center.y,center.z);
+			controls.target.set(center.x, center.y, center.z);
 
 			controls.rotateSpeed = 0.3;
 			controls.autoRotate = false;
@@ -660,20 +721,9 @@
 			effectFolder.add(params, 'ssaoEnabled').name("SSAO").onChange(function (value) {
 				ssaoPass.enabled = value;
 			});
-			effectFolder.add(params, 'fxaoEnabled').name("FXAA").onChange(function (value) {
-				effectFXAA.enabled = value;
-			});
 			effectFolder.add(params, 'filmEnabled').name("Film").onChange(function (value) {
 				effectFilm.enabled = value;
 			});
-			//	effectFolder.add(params, 'shadowEnabled').name("Shadows").onChange(function (value) {
-			//		renderer.shadowMapAutoUpdate = value;
-			//		renderer.clearTarget( spotLight.shadow );
-			//	});
-
-
-
-
 
 			var bloomFolder = gui.addFolder('Bloom and Exposure');
 			bloomFolder.add(params, 'exposure', 0.1, 2).name("Exposure");
@@ -710,12 +760,6 @@
 					mesh.material.roughness = Number(value);
 			});
 
-
-
-
-
-
-
 			materialFolder.addColor(params, 'color').name("Color").onChange(function (value) {
 				if (mesh.material !== undefined)
 					mesh.material.color = new THREE.Color(value);
@@ -726,24 +770,16 @@
 					terrainMesh.material.color = new THREE.Color(value);
 			});
 
-
 			materialFolder.add(params, 'wireframe').name("Wireframe").onChange(function (value) {
 				updateAttractor();
 			});
 			var geometryFolder = gui.addFolder('Geometry');
-			geometryFolder.add(params, 'steps', 1, 500, 1).name("Steps (thousands)").onChange(function (value) {
-				//updateAttractor();
-			});
-			geometryFolder.add(params, 'radius', 0.01, 1.0).name("Radius").onChange(function (value) {
-				//updateAttractor();
-			});
-			geometryFolder.add(params, 'stepSize', 0.001, 0.1).name("Step size").onChange(function (value) {
-				//updateAttractor();
-			});
-			geometryFolder.add(params, 'facets', 3, 8, 1).name("Tube facets").onChange(function (value) {
-				//updateAttractor();
-			});
+			geometryFolder.add(params, 'steps', 1, 500, 1).name("Steps (thousands)");
+			geometryFolder.add(params, 'radius', 0.01, 1.0).name("Radius");
+			geometryFolder.add(params, 'stepSize', 0.001, 0.1).name("Step size");
+			geometryFolder.add(params, 'facets', 3, 8, 1).name("Tube facets");
 			geometryFolder.add(params, 'rebuildGeometry').name("Rebuild geometry");
+
 			var scanLinesFolder = gui.addFolder('Scan Lines');
 			scanLinesFolder.add(params, 'nIntensity', 0, 1.0).name("Noise level").onChange(function (value) {
 				effectFilm.uniforms.nIntensity.value = Number(value);
@@ -766,7 +802,7 @@
 				};
 			});
 
-			gui.remember(params);
+			//gui.remember(params);
 			gui.open();
 		}
 
@@ -780,7 +816,6 @@
 			renderer.setSize(width, height);
 			composer.setSize(width, height);
 			effectFilm.uniforms.sCount.value = height;
-			effectFXAA.uniforms['resolution'].value.set(1 / window.innerWidth, 1 / window.innerHeight);
 		}
 
 		function animate() {
@@ -801,6 +836,7 @@
 				}
 			}
 			renderer.toneMappingExposure = Math.pow(params.exposure, 4.0);
+			//renderer.render(scene,camera);
 			composer.render(0.01);
 		}
 
