@@ -557,13 +557,13 @@
 			var composer = new THREE.EffectComposer(myRenderer);
 			composer.setSize(myRenderer.getSize().width, myRenderer.getSize().height);
 			composer.addPass(renderScene);
-			if (params.bloomEnabled && myRenderer != renderer)
+			if (params.bloomEnabled)
 				composer.addPass(bloomPass);
-			if (params.vignetteEnabled && myRenderer != renderer)
+			if (params.vignetteEnabled)
 				composer.addPass(effectVignette);
-			if (params.filmEnabled && myRenderer != renderer)
+			if (params.filmEnabled)
 				composer.addPass(effectFilm);
-			if (params.ssaoEnabled && myRenderer != renderer)
+			if (params.ssaoEnabled)
 				composer.addPass(ssaoPass);
 			composer.addPass(copyShader);
 			return composer;
