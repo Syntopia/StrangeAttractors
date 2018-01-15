@@ -285,6 +285,12 @@
 		</div>
 	</div>
 
+	<div id="savingBox" class="modal">
+		<div id="savingBoxDiv" class="modal-content">
+			<p>Preparing image.</p><p>Image will automatically download when ready...</p>
+		</div>
+	</div>
+
 
 	<script type="text/javascript">
 		var Settings = {};
@@ -376,12 +382,25 @@
 			aboutDialog.style.display = "block";
 		}
 
+		function showSavingBox() {
+			aboutDialog.style.display = "none";
+			savingBox.style.display = "block";
+			setTimeout(function(){ hideSavingBox(); }, 5000);
+		}
+
+		function hideSavingBox() {
+			savingBox.style.display = "none";
+		}
+
 		window.onclick = function (event) {
 			if (event.target == functionDialog) {
 				functionDialog.style.display = "none";
 			}
 			if (event.target == aboutDialog) {
 				aboutDialog.style.display = "none";
+			}
+			if (event.target == savingBox) {
+				savingBox.style.display = "none";
 			}
 		}
 
@@ -436,12 +455,14 @@
 			}
 		});
 
+		
 
 		function saveAsImage() {
 			var imgData, imgNode;
 
 			try {
 				var scale = params.exportScale;
+				showSavingBox();
 				renderer.setSize(Math.round(window.innerWidth * scale), Math.round(window.innerHeight * scale));
 				
 				// We create a new post-processing step here (but couldn't we just rescale the existing?)
