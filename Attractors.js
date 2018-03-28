@@ -341,6 +341,31 @@ TSUCS2.prototype = Object.assign(TSUCS2 .prototype, {
 });
 
 // -----------------------------------------------------------------------
+// https://en.wikipedia.org/wiki/R%C3%B6ssler_attractor
+
+function Rossler() {
+    this.a=0.2;
+    this.b=0.2;
+    this.c=5.7;
+};
+
+Rossler.prototype = Object.assign(Rossler .prototype, {
+    constructor: Rossler ,
+
+    getName: function() {
+        return "Rössler";
+    },
+
+    advance: function (p, t) {
+        t = t/10.1;
+       var dx = -p[1]-p[2];
+        var dy = p[0]+this.a*p[1];
+        var dz = this.b + p[2]*(p[0]-this.c);
+         return [p[0] + dx * t, p[1] + dy * t, p[2] + dz * t];
+    },
+});
+
+// -----------------------------------------------------------------------
 // http://3d-meier.de/tut19/Seite43.html
 
 function TSUCS1 () {
@@ -370,6 +395,6 @@ TSUCS1.prototype = Object.assign(TSUCS1 .prototype, {
 function getAttractors() {
     return [new Aizawa(), new ChenLee(), new Lorentz(), new Rucklidge(),
          new Arneodo(), new Bouali(), /*new DequanLi(), */new LiuChen(), new NoseHoover(),
-        new Halvorsen(), new Hadley(), new TSUCS1(),
+        new Halvorsen(), new Hadley(), new TSUCS1(), new Rossler()
         ];
 }
