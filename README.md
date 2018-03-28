@@ -1,4 +1,4 @@
 # StrangeAttractors
 
-Work-in-progress. Current state can be found here:
+Explore Strange Attractors - export high-resolution screenshots, or export geometry as STL/OBJ.
 [https://syntopia.github.io/StrangeAttractors]
